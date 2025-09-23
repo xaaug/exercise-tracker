@@ -1,0 +1,189 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Daily Workout Tracker</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
+  <style>
+    body {
+      font-family: 'Inter', sans-serif;
+      background: #f8f8f8;
+      color: #111;
+      max-width: 500px;
+      margin: 0 auto;
+      padding: 1rem;
+    }
+    h1, h2 {
+      text-align: center;
+    }
+    #day-label {
+      text-align: center;
+      font-weight: 600;
+      margin-bottom: 1rem;
+    }
+    .exercise {
+      display: flex;
+      flex-direction: column;
+      gap: 0.25rem;
+      background: #fff;
+      border: 1px solid #ccc;
+      border-radius: 8px;
+      padding: 0.75rem;
+      margin: 0.5rem 0;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+    }
+    .exercise.done {
+      opacity: 0.6;
+      text-decoration: line-through;
+    }
+    .exercise label {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      font-weight: 600;
+    }
+    .description {
+      font-size: 0.85rem;
+      color: #444;
+      margin-left: 1.5rem;
+    }
+    button {
+      width: 100%;
+      margin-top: 1rem;
+      padding: 0.75rem;
+      background: #000;
+      color: #fff;
+      border: none;
+      border-radius: 6px;
+      font-weight: bold;
+      cursor: pointer;
+      transition: background 0.2s ease;
+    }
+    button:disabled {
+      background: #555;
+      cursor: not-allowed;
+    }
+    button:hover:enabled {
+      background: #333;
+    }
+    .history {
+      margin-top: 2rem;
+      border-top: 1px solid #ddd;
+      padding-top: 1rem;
+    }
+    .history-item {
+      display: flex;
+      justify-content: space-between;
+      padding: 0.25rem 0;
+      font-size: 0.9rem;
+    }
+  </style>
+</head>
+<body>
+  <h1>Daily Workout</h1>
+  <div id="day-label"></div>
+  <div id="workout"></div>
+  <button id="complete-btn">Mark Day Complete</button>
+
+  <div class="history">
+    <h2>History</h2>
+    <div id="history"></div>
+  </div>
+
+  <script>
+    const plan = {
+      days: [
+        { day: "Monday", exercises: [
+          { name: "Push-ups", sets: 3, reps: 12, desc: "Keep your body straight, lower until elbows 90°, then push back up." },
+          { name: "Tricep Dips", sets: 3, reps: 10, desc: "Use a chair, bend elbows to 90° and push yourself back up." },
+          { name: "Plank", time: "30s", sets: 2, desc: "Keep your body in a straight line, elbows under shoulders." }
+        ]},
+        { day: "Tuesday", exercises: [
+          { name: "Squats", sets: 3, reps: 15, desc: "Feet shoulder-width apart, lower hips until thighs parallel." },
+          { name: "Lunges", sets: 3, reps: 10, desc: "Step forward, bend both knees to 90°, push back up." },
+          { name: "Glute Bridges", sets: 3, reps: 12, desc: "Lie down, lift hips until body forms a straight line." }
+        ]},
+        { day: "Wednesday", exercises: [
+          { name: "Jumping Jacks", sets: 3, reps: 30, desc: "Jump feet apart while raising arms overhead, return to start." },
+          { name: "Mountain Climbers", sets: 3, reps: 20, desc: "From plank position, drive knees toward chest alternately." },
+          { name: "Russian Twists", sets: 3, reps: 20, desc: "Sit, lean back slightly, twist torso side to side." }
+        ]},
+        { day: "Thursday", exercises: [
+          { name: "Incline Push-ups", sets: 3, reps: 12, desc: "Hands on elevated surface, keep body straight, push up." },
+          { name: "Shoulder Taps", sets: 3, reps: 20, desc: "From plank, tap opposite shoulder without rotating hips." },
+          { name: "Side Plank", sets: 2, time: "20s each", desc: "Support yourself on one elbow, keep body in straight line." }
+        ]},
+        { day: "Friday", exercises: [
+          { name: "Step-Ups", sets: 3, reps: 12, desc: "Step onto chair/bench with one foot, bring other foot up, step back down." },
+          { name: "Calf Raises", sets: 3, reps: 15, desc: "Rise up on toes, hold briefly, lower back down." },
+          { name: "Wall Sit", sets: 2, time: "30s", desc: "Back against wall, knees at 90°, hold position." }
+        ]},
+        { day: "Saturday", exercises: [
+          { name: "Burpees", sets: 3, reps: 10, desc: "Squat, kick feet back, return to squat, jump up." },
+          { name: "Leg Raises", sets: 3, reps: 12, desc: "Lie down, lift legs to 90° slowly, lower without touching floor." },
+          { name: "Bicycle Crunches", sets: 3, reps: 20, desc: "Alternate elbow-to-knee in pedaling motion." }
+        ]},
+        { day: "Sunday", exercises: [
+          { name: "Walk", time: "20-30min", desc: "Walk at a moderate pace, focus on breathing." },
+          { name: "Stretch", time: "10min", desc: "Gentle stretching for major muscles, hold 20-30s each." }
+        ]}
+      ]
+    };
+
+    const workoutDiv = document.getElementById('workout');
+    const historyDiv = document.getElementById('history');
+    const completeBtn = document.getElementById('complete-btn');
+    const dayLabel = document.getElementById('day-label');
+
+    const today = new Date();
+    const dayName = today.toLocaleDateString('en-US', { weekday: 'long' });
+    const todayPlan = plan.days.find(d => d.day === dayName);
+    const todayStr = today.toISOString().split('T')[0];
+
+    let history = JSON.parse(localStorage.getItem('history') || '[]');
+
+    function renderWorkout() {
+      workoutDiv.innerHTML = '';
+      dayLabel.textContent = `Today is ${dayName}`;
+      todayPlan.exercises.forEach((ex, i) => {
+        const div = document.createElement('div');
+        div.className = 'exercise';
+        div.innerHTML = `
+          <label><input type="checkbox" data-index="${i}"> ${ex.name} (${ex.sets || ''} ${ex.reps ? 'x ' + ex.reps : ex.time || ''})</label>
+          <div class="description">${ex.desc}</div>
+        `;
+        workoutDiv.appendChild(div);
+      });
+
+      if (history.some(item => item.date === todayStr && item.done)) {
+        document.querySelectorAll('.exercise').forEach(ex => ex.classList.add('done'));
+        completeBtn.disabled = true;
+        completeBtn.textContent = 'Day Already Complete ';
+      }
+    }
+
+    function renderHistory() {
+      historyDiv.innerHTML = '';
+      history.slice(-7).forEach(item => {
+        const div = document.createElement('div');
+        div.className = 'history-item';
+        div.innerHTML = `<span>${item.date}</span><span>${item.done ? '✅' : '❌'}</span>`;
+        historyDiv.appendChild(div);
+      });
+    }
+
+    completeBtn.addEventListener('click', () => {
+      if (history.some(item => item.date === todayStr && item.done)) return;
+      history.push({ date: todayStr, done: true });
+      localStorage.setItem('history', JSON.stringify(history));
+      renderWorkout();
+      renderHistory();
+      alert('Great job! Day marked complete.');
+    });
+
+    renderWorkout();
+    renderHistory();
+  </script>
+</body>
+</html>
