@@ -22,6 +22,20 @@
       font-weight: 600;
       margin-bottom: 1rem;
     }
+    .progress-bar-container {
+      width: 100%;
+      height: 12px;
+      background-color: #e0e0e0;
+      border-radius: 6px;
+      margin-bottom: 1rem;
+      overflow: hidden;
+    }
+    .progress-bar {
+      height: 100%;
+      width: 0;
+      background-color: #4caf50;
+      transition: width 0.3s ease-in-out;
+    }
     .exercise {
       display: flex;
       flex-direction: column;
@@ -32,6 +46,9 @@
       padding: 0.75rem;
       margin: 0.5rem 0;
       box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+    }
+    .exercise {
+      transition: all 0.2s ease;
     }
     .exercise.done {
       opacity: 0.6;
@@ -78,11 +95,34 @@
       padding: 0.25rem 0;
       font-size: 0.9rem;
     }
+    #toast {
+      visibility: hidden;
+      min-width: 250px;
+      margin-left: -125px;
+      background-color: #333;
+      color: #fff;
+      text-align: center;
+      border-radius: 2px;
+      padding: 16px;
+      position: fixed;
+      z-index: 1;
+      left: 50%;
+      bottom: 30px;
+      font-size: 17px;
+      transition: visibility 0s, opacity 0.5s linear;
+    }
+    #toast.show {
+      visibility: visible;
+      opacity: 1;
+    }
   </style>
 </head>
 <body>
   <h1>Daily Workout</h1>
   <div id="day-label"></div>
+  <div class="progress-bar-container">
+    <div id="progress-bar" class="progress-bar"></div>
+  </div>
   <div id="workout"></div>
   <button id="complete-btn">Mark Day Complete</button>
 
@@ -90,6 +130,8 @@
     <h2>History</h2>
     <div id="history"></div>
   </div>
+
+  <div id="toast"></div>
 
   <script>
     const plan = {
@@ -135,6 +177,7 @@
     const historyDiv = document.getElementById('history');
     const completeBtn = document.getElementById('complete-btn');
     const dayLabel = document.getElementById('day-label');
+    const progressBar = document.getElementById('progress-bar');
 
     const today = new Date();
     const dayName = today.toLocaleDateString('en-US', { weekday: 'long' });
@@ -142,6 +185,37 @@
     const todayStr = today.toISOString().split('T')[0];
 
     let history = JSON.parse(localStorage.getItem('history') || '[]');
+    let dailyProgress = JSON.parse(localStorage.getItem(`progress-${todayStr}`) || '[]');
+
+    function updateProgress() {
+      const totalExercises = todayPlan.exercises.length;
+      if (totalExercises === 0) {
+        progressBar.style.width = '0%';
+        return;
+      }
+      const completedExercises = dailyProgress.filter(done => done).length;
+      const progressPercentage = (completedExercises / totalExercises) * 100;
+      progressBar.style.width = `${progressPercentage}%`;
+    }
+
+    function updateButtonState() {
+      if (history.some(item => item.date === todayStr && item.done)) {
+        completeBtn.disabled = true;
+        completeBtn.textContent = 'Day Already Complete';
+        return;
+      }
+
+      const completedExercises = dailyProgress.filter(done => done).length;
+      const totalExercises = todayPlan.exercises.length;
+
+      if (totalExercises > 0 && completedExercises === totalExercises) {
+        completeBtn.disabled = false;
+        completeBtn.textContent = 'Mark Day Complete';
+      } else {
+        completeBtn.disabled = true;
+        completeBtn.textContent = 'Finish all exercises to complete';
+      }
+    }
 
     function renderWorkout() {
       workoutDiv.innerHTML = '';
@@ -149,18 +223,19 @@
       todayPlan.exercises.forEach((ex, i) => {
         const div = document.createElement('div');
         div.className = 'exercise';
+        const isDone = dailyProgress[i];
+        if (isDone) {
+          div.classList.add('done');
+        }
         div.innerHTML = `
-          <label><input type="checkbox" data-index="${i}"> ${ex.name} (${ex.sets || ''} ${ex.reps ? 'x ' + ex.reps : ex.time || ''})</label>
+          <label><input type="checkbox" data-index="${i}" ${isDone ? 'checked' : ''}> ${ex.name} (${ex.sets || ''} ${ex.reps ? 'x ' + ex.reps : ex.time || ''})</label>
           <div class="description">${ex.desc}</div>
         `;
         workoutDiv.appendChild(div);
       });
 
-      if (history.some(item => item.date === todayStr && item.done)) {
-        document.querySelectorAll('.exercise').forEach(ex => ex.classList.add('done'));
-        completeBtn.disabled = true;
-        completeBtn.textContent = 'Day Already Complete ';
-      }
+      updateProgress();
+      updateButtonState();
     }
 
     function renderHistory() {
@@ -173,13 +248,44 @@
       });
     }
 
+    function showToast(message) {
+      const toast = document.getElementById("toast");
+      toast.textContent = message;
+      toast.className = "show";
+      setTimeout(function(){ toast.className = toast.className.replace("show", ""); }, 3000);
+    }
+
     completeBtn.addEventListener('click', () => {
       if (history.some(item => item.date === todayStr && item.done)) return;
+
       history.push({ date: todayStr, done: true });
       localStorage.setItem('history', JSON.stringify(history));
+
+      localStorage.removeItem(`progress-${todayStr}`);
+      dailyProgress = [];
+
       renderWorkout();
       renderHistory();
-      alert('Great job! Day marked complete.');
+      showToast('Great job! Day marked complete.');
+    });
+
+    workoutDiv.addEventListener('change', (e) => {
+      if (e.target.type === 'checkbox') {
+        const index = parseInt(e.target.dataset.index, 10);
+        const isDone = e.target.checked;
+
+        dailyProgress[index] = isDone;
+        localStorage.setItem(`progress-${todayStr}`, JSON.stringify(dailyProgress));
+
+        const exerciseEl = e.target.closest('.exercise');
+        if (isDone) {
+          exerciseEl.classList.add('done');
+        } else {
+          exerciseEl.classList.remove('done');
+        }
+        updateProgress();
+        updateButtonState();
+      }
     });
 
     renderWorkout();
