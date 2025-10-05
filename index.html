@@ -8,81 +8,132 @@
   <style>
     body {
       font-family: 'Inter', sans-serif;
-      background: #f8f8f8;
-      color: #111;
+      background: #1a1a2e;
+      color: #e0e0e0;
       max-width: 500px;
       margin: 0 auto;
       padding: 1rem;
     }
     h1, h2 {
       text-align: center;
+      font-weight: 700;
+      letter-spacing: 1px;
+    }
+    h1 {
+      font-size: 2.2rem;
+      margin-bottom: 0.5rem;
+      text-shadow: 0 2px 4px rgba(0,0,0,0.2);
+    }
+    h2 {
+      font-size: 1.5rem;
+      color: #e94560;
+      margin-top: 2.5rem;
     }
     #day-label {
       text-align: center;
       font-weight: 600;
-      margin-bottom: 1rem;
+      margin-bottom: 1.5rem;
+      font-size: 1.1rem;
+      color: #aaa;
     }
     .progress-bar-container {
       width: 100%;
       height: 12px;
-      background-color: #e0e0e0;
+      background-color: #162447;
       border-radius: 6px;
       margin-bottom: 1rem;
       overflow: hidden;
     }
+    @keyframes progress-animation {
+      0% { background-position: 1rem 0; }
+      100% { background-position: 0 0; }
+    }
     .progress-bar {
       height: 100%;
       width: 0;
-      background-color: #4caf50;
-      transition: width 0.3s ease-in-out;
+      background-color: #1f4068;
+      background-image: linear-gradient(45deg, rgba(255,255,255,.15) 25%, transparent 25%, transparent 50%, rgba(255,255,255,.15) 50%, rgba(255,255,255,.15) 75%, transparent 75%, transparent);
+      background-size: 1rem 1rem;
+      transition: width 0.4s ease-in-out;
+      animation: progress-animation .7s linear infinite;
     }
     .exercise {
       display: flex;
       flex-direction: column;
-      gap: 0.25rem;
-      background: #fff;
-      border: 1px solid #ccc;
-      border-radius: 8px;
-      padding: 0.75rem;
-      margin: 0.5rem 0;
-      box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+      gap: 0.5rem;
+      background: #1f1f3a;
+      border: 1px solid #3c3c5c;
+      border-radius: 12px;
+      padding: 1rem;
+      margin: 0.75rem 0;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.2);
     }
     .exercise {
       transition: all 0.2s ease;
+    }
+    .exercise:hover {
+      transform: scale(1.02);
     }
     .exercise.done {
       opacity: 0.6;
       text-decoration: line-through;
     }
-    .exercise label {
+    .exercise-label-container {
       display: flex;
       align-items: center;
-      gap: 0.5rem;
+      gap: 0.75rem;
       font-weight: 600;
+      cursor: pointer;
+    }
+    .exercise-label-container input[type="checkbox"] {
+      appearance: none;
+      -webkit-appearance: none;
+      width: 20px;
+      height: 20px;
+      border: 2px solid #e94560;
+      border-radius: 4px;
+      cursor: pointer;
+      position: relative;
+      transition: all 0.2s ease-in-out;
+    }
+    .exercise-label-container input[type="checkbox"]:checked {
+      background-color: #e94560;
+      border-color: #e94560;
+    }
+    .exercise-label-container input[type="checkbox"]:checked::after {
+      content: '✔';
+      font-size: 14px;
+      color: #fff;
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
     }
     .description {
       font-size: 0.85rem;
-      color: #444;
+      color: #aaa;
       margin-left: 1.5rem;
     }
     button {
       width: 100%;
       margin-top: 1rem;
       padding: 0.75rem;
-      background: #000;
+      background: #e94560;
       color: #fff;
       border: none;
       border-radius: 6px;
       font-weight: bold;
       cursor: pointer;
-      transition: background 0.2s ease;
+      transition: all 0.2s ease;
     }
     button:disabled {
-      background: #555;
+      background: #5c2a36;
       cursor: not-allowed;
     }
     button:hover:enabled {
-      background: #333;
+      background: #ff5773;
+      transform: translateY(-2px);
+      box-shadow: 0 4px 8px rgba(0,0,0,0.3);
     }
     .history {
       margin-top: 2rem;
@@ -92,14 +143,18 @@
     .history-item {
       display: flex;
       justify-content: space-between;
-      padding: 0.25rem 0;
+      padding: 0.5rem 0.25rem;
       font-size: 0.9rem;
+      border-bottom: 1px solid #3c3c5c;
+    }
+    .history-item:last-child {
+      border-bottom: none;
     }
     #toast {
       visibility: hidden;
       min-width: 250px;
       margin-left: -125px;
-      background-color: #333;
+      background-color: #e94560;
       color: #fff;
       text-align: center;
       border-radius: 2px;
@@ -228,7 +283,10 @@
           div.classList.add('done');
         }
         div.innerHTML = `
-          <label><input type="checkbox" data-index="${i}" ${isDone ? 'checked' : ''}> ${ex.name} (${ex.sets || ''} ${ex.reps ? 'x ' + ex.reps : ex.time || ''})</label>
+          <div class="exercise-label-container">
+            <input type="checkbox" id="ex-${i}" data-index="${i}" ${isDone ? 'checked' : ''}>
+            <label for="ex-${i}">${ex.name} (${ex.sets || ''} ${ex.reps ? 'x ' + ex.reps : ex.time || ''})</label>
+          </div>
           <div class="description">${ex.desc}</div>
         `;
         workoutDiv.appendChild(div);
